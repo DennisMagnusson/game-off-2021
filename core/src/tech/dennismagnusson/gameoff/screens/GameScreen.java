@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Pixmap;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
@@ -36,6 +37,8 @@ public class GameScreen implements Screen {
 
     List<Rectangle> damageAreas;
 
+    SpriteBatch batch;
+
     public static final float WIDTH = 16;
     public static final float HEIGHT = 9;
 
@@ -46,6 +49,9 @@ public class GameScreen implements Screen {
         effectManager = new EffectManager();
         disposables.add(effectManager.manager);
         damageAreas = new LinkedList<>();
+
+        batch = new SpriteBatch();
+        disposables.add(batch);
 
         final Random random = new Random();
         enemies = new ArrayList<>();
@@ -85,15 +91,14 @@ public class GameScreen implements Screen {
 
         }
 
-
-
         effectManager.begin();
+
+
         Gdx.gl.glClearColor(0.3f, 0.3f, 0.3f, 0f);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         shapeRenderer.setColor(Color.WHITE);
-        player.render(shapeRenderer);
         shapeRenderer.setColor(Color.PURPLE);
         for(Enemy e : enemies) {
             e.render(shapeRenderer);
@@ -102,12 +107,23 @@ public class GameScreen implements Screen {
         for(Rectangle r : damageAreas) {
             shapeRenderer.rect(r.x, r.y, r.width, r.height);
         }
+        float groundLevel = 0.5f;
+        shapeRenderer.line(-10, groundLevel, 50, groundLevel);// Ground
         shapeRenderer.end();
+
+        batch.setProjectionMatrix(camera.combined);
+        batch.begin();
+        player.render(batch);
+        batch.end();
 
         effectManager.end();
     }
 
     public void createDamageArea(final Rectangle rect, float duration) {
+        if(rect.width < 0) {
+            rect.width = -rect.width;
+            rect.x -= rect.width;
+        }
         damageAreas.add(rect);
         new Timer().scheduleTask(new Timer.Task() {
             @Override

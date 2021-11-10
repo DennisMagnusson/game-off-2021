@@ -2,15 +2,20 @@ package tech.dennismagnusson.gameoff.game;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.graphics.g2d.Animation;
+import com.badlogic.gdx.graphics.g2d.Batch;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.utils.Timer;
 import tech.dennismagnusson.gameoff.screens.GameScreen;
 
 public class Player {
 
     private float x = 0f, y = 1f;
-    private float width = 1f, height = 2f;
+    private float width = 2f, height = 4f;
     private float xvel;
     private float yvel;
     private boolean inAir = true;
@@ -18,6 +23,7 @@ public class Player {
     boolean movable = true;
     boolean evadeable = true;
     boolean attackable = true;
+    boolean damaging = false; // Heavy attack thingy
 
     private float groundLevel = 0.5f;
 
@@ -28,9 +34,23 @@ public class Player {
     private EffectManager effectManager;
     private GameScreen gameScreen;
 
+    private Animation<TextureRegion> runningAnimation, idleAnimation, jumpAnimation, fallAnimation, heavyAnimation, lightAnimation, dashAnimation;
+
+    AnimationManager animationManager;
+
     public Player(EffectManager effectManager, GameScreen gameScreen) {
         this.effectManager = effectManager;
         this.gameScreen = gameScreen;
+        runningAnimation = GifDecoder.loadGIFAnimation(Animation.PlayMode.LOOP, Gdx.files.internal("animations/Running.gif").read());
+        idleAnimation = GifDecoder.loadGIFAnimation(Animation.PlayMode.LOOP, Gdx.files.internal("animations/Idle.gif").read());
+        lightAnimation = GifDecoder.loadGIFAnimation(Animation.PlayMode.NORMAL, Gdx.files.internal("animations/Light.gif").read());
+        heavyAnimation = GifDecoder.loadGIFAnimation(Animation.PlayMode.NORMAL, Gdx.files.internal("animations/Heavy.gif").read());
+        dashAnimation = GifDecoder.loadGIFAnimation(Animation.PlayMode.NORMAL, Gdx.files.internal("animations/Dash.gif").read());
+        jumpAnimation = GifDecoder.loadGIFAnimation(Animation.PlayMode.NORMAL, Gdx.files.internal("animations/Jump.gif").read());
+        fallAnimation = GifDecoder.loadGIFAnimation(Animation.PlayMode.LOOP, Gdx.files.internal("animations/Fall.gif").read());
+
+        animationManager = new AnimationManager();
+        animationManager.setAnimation(idleAnimation);
     }
 
     private void handleInput(float delta) {
@@ -52,7 +72,7 @@ public class Player {
         final boolean evade = Gdx.input.isKeyPressed(Input.Keys.L);
         if(l && !r) facingRight = false;
         else if(!l && r) facingRight = true;
-        else facingRight = xvel > 0;
+        // else facingRight = xvel > 0.01;
         if(evade && evadeable) {
 
             Rectangle rect = new Rectangle();
@@ -79,19 +99,29 @@ public class Player {
             yvel = Math.max(yvel, 0);
             movable = false;
             attackable = false;
-            schedMovable(0.2f);
-            schedAttackable(0.4f);
+            schedMovable(0.1f);
+            schedAttackable(0.3f);
+            animationManager.setAnimation(lightAnimation);
+
+            Rectangle rect = new Rectangle();
+            rect.x = x + width/2f;
+            rect.y = y;
+            rect.width = facingRight ? 2.0f : -2.0f;
+            rect.height = this.height;
+            gameScreen.createDamageArea(rect, 0.1f);
             return;
         }
 
         if(heavy && attackable) {
             // TODO combos and shit
             xvel = 0f;
-            yvel = Math.max(yvel, 0);
+            yvel = -30;//Math.max(yvel, 0);
             movable = false;
             attackable = false;
             schedMovable(0.3f);
             schedAttackable(0.8f);
+            animationManager.setAnimation(heavyAnimation);
+            damaging = true;
             return;
         }
 
@@ -109,6 +139,7 @@ public class Player {
         if(jump && movable && !inAir) {
             yvel = jumpspeed;
             inAir = true;
+            animationManager.setAnimation(jumpAnimation);
             // TODO Animation
         }
 
@@ -120,9 +151,16 @@ public class Player {
         xvel = Math.max(xvel, -maxxvel);
         yvel = Math.min(yvel, maxyvel);
         yvel = Math.max(yvel, -maxyvel);
+
+        if(!animationManager.inProgress()) {
+            if(!inAir && Math.abs(xvel) > 0.3) animationManager.setAnimation(runningAnimation);
+            else if(!inAir) animationManager.setAnimation(idleAnimation);
+            else if(yvel < 0) animationManager.setAnimation(fallAnimation);
+        }
     }
 
     public void update(float delta) {
+        animationManager.act(delta);
         if(movable) {
             handleInput(delta);
 
@@ -135,12 +173,23 @@ public class Player {
             x += xvel * delta;
             y += yvel * delta;
         }
+        if(damaging) {
+            Rectangle rect = new Rectangle();
+            float w = width;
+            rect.x = x + width/2f;
+            rect.y = y;
+            rect.width = facingRight ? w : -w;
+            rect.height = this.height;
+            gameScreen.createDamageArea(rect, 0.1f);
+        }
 
+        if(!inAir) damaging = false;
     }
 
-    public void render(ShapeRenderer renderer) { // TODO Update to spritebatch
-        renderer.rect(x, y, width, height);
-        renderer.line(-10, groundLevel, 50, groundLevel);
+    public void render(SpriteBatch batch) {
+        animationManager.draw(batch, 0f);
+        // renderer.rect(x, y, width, height);
+        // renderer.line(-10, groundLevel, 50, groundLevel);
     }
 
     public float getX() {
@@ -210,5 +259,35 @@ public class Player {
 
     public Rectangle getRect() {
         return new Rectangle(x, y, width, height);
+    }
+
+    private class AnimationManager extends Actor {
+
+        private Animation currAnim;
+        private float timePlayed = 0f;
+
+        public void setAnimation(Animation anim) {
+            if(currAnim == anim) return;
+            this.currAnim = anim;
+            timePlayed = 0f;
+        }
+
+        public boolean inProgress() {
+            return (currAnim.getPlayMode() == Animation.PlayMode.NORMAL && timePlayed < currAnim.getAnimationDuration());
+        }
+
+        @Override
+        public void draw(Batch batch, float parentAlpha) {
+            TextureRegion reg = (TextureRegion) currAnim.getKeyFrame(this.timePlayed);
+            if(facingRight == reg.isFlipX())
+                reg.flip(true, false);
+
+            batch.draw(reg, x, y, width, height);
+        }
+
+        @Override
+        public void act(float delta) {
+            timePlayed += delta;
+        }
     }
 }
