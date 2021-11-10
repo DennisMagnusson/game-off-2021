@@ -15,10 +15,7 @@ import com.badlogic.gdx.utils.Timer;
 import com.crashinvaders.vfx.VfxManager;
 import com.crashinvaders.vfx.effects.*;
 import javafx.scene.effect.Bloom;
-import tech.dennismagnusson.gameoff.game.BasicEnemy;
-import tech.dennismagnusson.gameoff.game.EffectManager;
-import tech.dennismagnusson.gameoff.game.Enemy;
-import tech.dennismagnusson.gameoff.game.Player;
+import tech.dennismagnusson.gameoff.game.*;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -30,7 +27,7 @@ public class GameScreen implements Screen {
     Player player;
     List<Enemy> enemies;
     ShapeRenderer shapeRenderer;
-    OrthographicCamera camera;
+    public OrthographicCamera camera;
     public List<Disposable> disposables;
 
     EffectManager effectManager;
@@ -56,13 +53,14 @@ public class GameScreen implements Screen {
         final Random random = new Random();
         enemies = new ArrayList<>();
         player = new Player(effectManager, this);
+        final GameScreen gs = this;
         new Timer().schedule(new Timer.Task() {
             @Override
             public void run() {
                 for(int i = 0; i < 10; i++) {
                     float x = random.nextFloat()*WIDTH;
                     float y = random.nextFloat()*HEIGHT;
-                    enemies.add(new BasicEnemy(x, y, (x-(WIDTH/2f))*0.3f, (y-(HEIGHT/2f))*0.3f));
+                    addEnemy(new BasicEnemy(x, y, (x-(WIDTH/2f))*0.3f, (y-(HEIGHT/2f))*0.3f));
                 }
             }
         }, 5, 3);
@@ -71,6 +69,10 @@ public class GameScreen implements Screen {
         camera = new OrthographicCamera(WIDTH, HEIGHT);
         camera.position.set(WIDTH/2, HEIGHT/2, 0f);
         disposables.add(shapeRenderer);
+
+        addEnemy(new FlyingEnemy(20, 2));
+        addEnemy(new FlyingEnemy(30, 2));
+        addEnemy(new FlyingEnemy(45, 4));
     }
 
     @Override
@@ -87,8 +89,11 @@ public class GameScreen implements Screen {
             for(Rectangle r : damageAreas) {
                 if(r.contains(pos)) e.takeDamage(1);
             }
-            e.update(delta, player);
+            e.update(delta);
 
+        }
+        if(player.getX() > camera.position.x) {
+            camera.position.x = player.getX();
         }
 
         effectManager.begin();
@@ -131,6 +136,11 @@ public class GameScreen implements Screen {
                 damageAreas.remove(rect);
             }
         }, duration);
+    }
+
+    public void addEnemy(Enemy e) {
+        this.enemies.add(e);
+        e.init(player, this);
     }
 
     @Override

@@ -1,5 +1,6 @@
 package tech.dennismagnusson.gameoff.game;
 
+import com.badlogic.gdx.Game;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
 import tech.dennismagnusson.gameoff.screens.GameScreen;
@@ -11,8 +12,10 @@ public class BasicEnemy implements Enemy {
     private float xvel;
     private float yvel;
     private int damage;
+    Player player;
 
     private boolean exists = true;
+    private GameScreen gameScreen;
 
     public BasicEnemy(float x, float y, float xvel, float yvel) {
         this.xvel = xvel;
@@ -23,23 +26,24 @@ public class BasicEnemy implements Enemy {
     }
 
     @Override
-    public void init() {
+    public void init(Player player, GameScreen gameScreen) {
+        this.player = player;
+        this.gameScreen = gameScreen;
         // TODO Create a sprite or something
     }
 
     @Override
-    public void update(float delta, Player player) {
+    public void update(float delta) {
         if(!exists) return;
         x += xvel*delta;
         y += yvel*delta;
-        // TODO Check for intersect with player
 
         if(player.getRect().contains(new Vector2(x, y))) {
             player.takeDamage(x, y, damage);
             exists = false;
         }
 
-        if(x < 0 || y < 0 || x > GameScreen.WIDTH || y > GameScreen.HEIGHT) exists = false;
+        if(x < 0 || y < 0 || x > GameScreen.WIDTH+gameScreen.camera.position.x || y > GameScreen.HEIGHT) exists = false;
     }
 
     @Override
