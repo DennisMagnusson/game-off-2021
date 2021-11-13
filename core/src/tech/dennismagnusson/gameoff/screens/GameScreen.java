@@ -17,14 +17,11 @@ import com.crashinvaders.vfx.effects.*;
 import javafx.scene.effect.Bloom;
 import tech.dennismagnusson.gameoff.game.*;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 public class GameScreen implements Screen {
 
-    Player player;
+    public Player player;
     List<Enemy> enemies;
     ShapeRenderer shapeRenderer;
     public OrthographicCamera camera;
@@ -34,14 +31,70 @@ public class GameScreen implements Screen {
 
     List<Rectangle> damageAreas;
 
+    List<Rectangle> platforms;
+
     SpriteBatch batch;
+    TextBoxManager textBoxManager;
 
     public static final float WIDTH = 16;
     public static final float HEIGHT = 9;
 
+    private String levelfilename;
+
+    public GameScreen(String filename) {
+        this.levelfilename = filename;
+    }
+
+    public void readFile(String filename) {
+        String[] file = Gdx.files.internal(filename).readString().split("\\r?\\n");
+        LinkedList<String> lines = new LinkedList<>();
+        for(String s : file) lines.add(s);
+        textBoxManager = new TextBoxManager(this);
+
+        int levelNumber = Integer.parseInt(lines.remove(0));
+        String startImageFilename = lines.remove(0); // Splash image
+        String musicfilename = lines.remove(0);
+        String bossmusicfilename  = lines.remove(0);
+
+        platforms = new ArrayList<>();
+        lines.remove(0); // Platforms
+        while(true) {
+            String line = lines.remove(0);
+            if(line.equalsIgnoreCase("enemies")) break;
+            String[] things = line.split("\\ ");
+            float x = Float.parseFloat(things[0]);
+            float y = Float.parseFloat(things[1]);
+            float w = Float.parseFloat(things[2]);
+            float h = Float.parseFloat(things[3]);
+            platforms.add(new Rectangle(x, y, w, h));
+        }
+
+        // ENEMIES
+        while(true) {
+            String line = lines.remove(0);
+            if(line.equalsIgnoreCase("text")) break;
+            String[] things = line.split("\\ ");
+            if(things[0].equalsIgnoreCase("flying")) {
+                // TODO Spawn a thing
+            }
+        }
+
+        // LINES
+        while(true) {
+            String line = lines.remove(0);
+            if(line.equalsIgnoreCase("boss")) break;
+            String text = line;
+            String[] things = lines.remove(0).split("\\ ");
+            textBoxManager.addTextBox(text, things[0], things[1], Float.parseFloat(things[2]));
+        }
+
+        // TODO BOSS HERE
+    }
+
     @Override
     public void show() {
         disposables = new ArrayList<>();
+        readFile(levelfilename);
 
         effectManager = new EffectManager();
         disposables.add(effectManager.manager);
@@ -96,6 +149,10 @@ public class GameScreen implements Screen {
             camera.position.x = player.getX();
         }
 
+        textBoxManager.update(delta);
+
+        // XXX RENDER
+
         effectManager.begin();
 
 
@@ -122,6 +179,8 @@ public class GameScreen implements Screen {
         batch.end();
 
         effectManager.end();
+
+        textBoxManager.render();
     }
 
     public void createDamageArea(final Rectangle rect, float duration) {
