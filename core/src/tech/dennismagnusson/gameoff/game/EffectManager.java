@@ -3,19 +3,20 @@ package tech.dennismagnusson.gameoff.game;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.crashinvaders.vfx.VfxManager;
 import com.crashinvaders.vfx.effects.*;
-import tech.dennismagnusson.gameoff.screens.GameScreen;
 
 public class EffectManager {
 
     public VfxManager manager;
     private FilmGrainEffect noise;
-    private RadialBlurEffect radialBlur;
+    public RadialBlurEffect radialBlur;
+    public ChromaticAberrationEffect chromaticAberration;
 
     private final boolean enabled = true;
 
     public EffectManager() {
         manager = new VfxManager(Pixmap.Format.RGB888);
-        manager.addEffect(new ChromaticAberrationEffect(5));
+        chromaticAberration = new ChromaticAberrationEffect(5);
+        manager.addEffect(chromaticAberration);
         manager.addEffect(new BloomEffect());
         manager.addEffect(new GaussianBlurEffect());
         radialBlur = new RadialBlurEffect(2);
@@ -47,6 +48,5 @@ public class EffectManager {
 
     public void setNoise(float amount) {
         noise.setNoiseAmount(amount);
-        System.out.println("NOISE AMOUNT: " + amount);
     }
 }
