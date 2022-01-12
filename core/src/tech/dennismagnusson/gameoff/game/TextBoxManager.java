@@ -28,6 +28,8 @@ public class TextBoxManager {
 
     Sprite backgroundImage;
 
+    Sprite textBoxBackground;
+
     public TextBoxManager(GameScreen game) {
         textBoxes = new LinkedList<>();
         queue = new LinkedList<>();
@@ -39,11 +41,12 @@ public class TextBoxManager {
         camera.position.set(-800f, -450f, 0f);
         batch = new SpriteBatch();
         batch.setProjectionMatrix(camera.combined);
-        Texture t = new Texture(Gdx.files.internal("badlogic.jpg"));
+        Texture t = new Texture(Gdx.files.internal("black.png"));
         game.disposables.add(t);
         backgroundImage = new Sprite(t);
-        // TODO Configure size correctly
         backgroundImage.setSize(1600, 250);
+        backgroundImage.setPosition(-800, -450);
+        backgroundImage.setAlpha(0.1f);
     }
 
     public void addTextBox(String text, String soundFilename, String sprite, float playerX) {
@@ -51,7 +54,8 @@ public class TextBoxManager {
         game.disposables.add(sound);
         Texture t = new Texture(Gdx.files.internal(sprite));
         Sprite s = new Sprite(t);
-        // TODO Configure position and shit
+        s.setPosition(-800, -450f);
+        s.setSize(300, 600);
         game.disposables.add(t);
 
         textBoxes.add(new TextBox(text, s, sound, playerX));
@@ -77,13 +81,22 @@ public class TextBoxManager {
     public void render() {
         if(currTextbox == null) return;
 
+        float alpha = 1f;
+        if(textBoxTime > 2.5f && queue.isEmpty())
+            alpha = 6-textBoxTime*2f;
+        if(textBoxTime < 0.5f)
+            alpha = textBoxTime*2f;
+        System.out.println("ALPHA="+alpha);
+
         String text = currTextbox.text.substring(0, Math.min(currTextbox.text.length(), (int) (textBoxTime*80f)));
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
-        font.draw(batch, text, -700, -200, 1400, Align.left, true);
+        backgroundImage.setAlpha(0.1f*alpha);
+        backgroundImage.draw(batch);
+        currTextbox.portrait.setAlpha(alpha);
+        currTextbox.portrait.draw(batch);
+        font.draw(batch, text, -450, -300, 1100, Align.left, true);
         batch.end();
-
-        // TODO Fade or something
     }
 
     public void setPlayer(Player player) {

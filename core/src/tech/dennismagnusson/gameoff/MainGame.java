@@ -9,8 +9,8 @@ public class MainGame extends Game {
 
 	@Override
 	public void create() {
-		// setScreen(new GameScreen("levels/1.lvl"));
+		setScreen(new GameScreen("levels/1.lvl"));
 		// setScreen(new FishingScreen());
-		setScreen(new MenuScreen());
+		// setScreen(new MenuScreen());
 	}
 }
