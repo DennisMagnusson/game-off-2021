@@ -14,7 +14,6 @@ import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.Timer;
 import com.crashinvaders.vfx.VfxManager;
 import com.crashinvaders.vfx.effects.*;
-import javafx.scene.effect.Bloom;
 import tech.dennismagnusson.gameoff.game.*;
 
 import java.util.*;
